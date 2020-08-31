@@ -6,84 +6,131 @@ import java.net.InetAddress;
 import java.net.MulticastSocket;
 
 import se.miun.distsys.listeners.ChatMessageListener;
-import se.miun.distsys.messages.ChatMessage;
-import se.miun.distsys.messages.Message;
-import se.miun.distsys.messages.MessageSerializer;
+import se.miun.distsys.messages.*;
 
 public class GroupCommuncation {
-	
-	private int datagramSocketPort = 9999; //You need to change this!		
-	DatagramSocket datagramSocket = null;	
-	boolean runGroupCommuncation = true;	
+
+	private int datagramSocketPort = 7331;
+
+	DatagramSocket datagramSocket = null;
+	boolean runGroupCommuncation = true;
 	MessageSerializer messageSerializer = new MessageSerializer();
-	
-	//Listeners
-	ChatMessageListener chatMessageListener = null;	
-	
-	public GroupCommuncation() {			
+
+	// Listeners
+	ChatMessageListener chatMessageListener = null;
+
+	public GroupCommuncation() {
 		try {
-			runGroupCommuncation = true;				
+			runGroupCommuncation = true;
 			datagramSocket = new MulticastSocket(datagramSocketPort);
-						
+			datagramSocket.setBroadcast(true);
+
 			ReceiveThread rt = new ReceiveThread();
 			rt.start();
-			
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
 	public void shutdown() {
-		runGroupCommuncation = false;		
+		runGroupCommuncation = false;
 	}
-	
 
-	class ReceiveThread extends Thread{
-		
+	class ReceiveThread extends Thread {
+
 		@Override
 		public void run() {
-			byte[] buffer = new byte[65536];		
+			byte[] buffer = new byte[65536];
 			DatagramPacket datagramPacket = new DatagramPacket(buffer, buffer.length);
-			
-			while(runGroupCommuncation) {
+
+			while (runGroupCommuncation) {
 				try {
-					datagramSocket.receive(datagramPacket);										
-					byte[] packetData = datagramPacket.getData();					
-					Message receivedMessage = messageSerializer.deserializeMessage(packetData);					
+					datagramSocket.receive(datagramPacket);
+					byte[] packetData = datagramPacket.getData();
+					Message receivedMessage = messageSerializer.deserializeMessage(packetData);
 					handleMessage(receivedMessage);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}
 		}
-				
-		private void handleMessage (Message message) {
-			
-			if(message instanceof ChatMessage) {				
-				ChatMessage chatMessage = (ChatMessage) message;				
-				if(chatMessageListener != null){
+
+		private void handleMessage(Message message) {
+
+			if (message instanceof ChatMessage) {
+				ChatMessage chatMessage = (ChatMessage) message;
+				if (chatMessageListener != null) {
 					chatMessageListener.onIncomingChatMessage(chatMessage);
 				}
-			} else {				
+			} else if (message instanceof StatusMessage) {
+				StatusMessage statusMessage = (StatusMessage) message;
+				if (chatMessageListener != null) {
+					chatMessageListener.onIncomingStatusMessage(statusMessage);
+				}
+			} else if (message instanceof JoinMessage) {
+				JoinMessage joinMessage = (JoinMessage) message;
+				if (chatMessageListener != null) {
+					chatMessageListener.onIncomingJoinMessage(joinMessage);
+				}
+			} else {
 				System.out.println("Unknown message type");
-			}			
-		}		
-	}	
-	
+			}
+		}
+	}
+
+	public void sendLeaveMessage(User user) {
+		try {
+			LeaveMessage leaveMessage = new LeaveMessage(user);
+			byte[] data = messageSerializer.serializeMessage(leaveMessage);
+			sendData(data);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void sendStatusMessage(User user) {
+		try {
+			StatusMessage statusMessage = new StatusMessage(user);
+			byte[] data = messageSerializer.serializeMessage(statusMessage);
+			sendData(data);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void sendJoinMessage(User user) {
+		try {
+			JoinMessage joinMessage = new JoinMessage(user);
+			byte[] data = messageSerializer.serializeMessage(joinMessage);
+			sendData(data);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
 	public void sendChatMessage(String chat) {
 		try {
 			ChatMessage chatMessage = new ChatMessage(chat);
-			byte[] sendData = messageSerializer.serializeMessage(chatMessage);
-			DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, 
-					InetAddress.getByName("255.255.255.255"), datagramSocketPort);
-			datagramSocket.send(sendPacket);
+			byte[] data = messageSerializer.serializeMessage(chatMessage);
+			sendData(data);
 		} catch (Exception e) {
 			e.printStackTrace();
-		}		
+		}
 	}
 
 	public void setChatMessageListener(ChatMessageListener listener) {
-		this.chatMessageListener = listener;		
+		this.chatMessageListener = listener;
 	}
-	
+
+	private void sendData(byte[] data) {
+		try {
+			DatagramPacket sendPacket = new DatagramPacket(data, data.length, InetAddress.getByName("255.255.255.255"),
+					datagramSocketPort);
+			datagramSocket.send(sendPacket);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
 }
