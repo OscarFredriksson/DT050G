@@ -157,6 +157,9 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 	}
 
 	private void updateClientsList() {
+		
+		System.out.println("\n");
+
 		txtpnUsers.setText("Connected users:");
 
 		Iterator it = users.entrySet().iterator();
@@ -164,16 +167,19 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 		while(it.hasNext())
 		{
 			Map.Entry pair = (Map.Entry)it.next();
-			System.out.println(pair.getKey() + " = " + pair.getValue());
+			System.out.println(pair.getKey() + "\t" + pair.getValue());
 			txtpnUsers.setText(txtpnUsers.getText() + "\n" + pair.getKey());
-			it.remove();
 		}
-
 	}
 
 	private void addClient(User user) {
 		
 		users.put(user.name, user);
+		updateClientsList();
+	}
+
+	private void removeClient(User user) {
+		users.remove(user.name);
 		updateClientsList();
 	}
 
@@ -186,16 +192,19 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 
 	@Override
 	public void onIncomingChatMessage(final ChatMessage chatMessage) {
+		System.out.println("incoming chat message...");
 		txtpnChat.setText(txtpnChat.getText() + "\n" + chatMessage.chat);
 	}
 
 	@Override
 	public void onIncomingStatusMessage(final StatusMessage statusMessage) {
+		System.out.println("status message");
 		addClient(statusMessage.user);
 	}
 
 	@Override
 	public void onIncomingJoinMessage(final JoinMessage joinMessage) {
+		System.out.println("join message");
 		txtpnChat.setText(txtpnChat.getText() + "\n" + joinMessage.user.name + " joined the chat!");
 		addClient(joinMessage.user);
 
@@ -205,5 +214,7 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 	@Override
 	public void onIncomingLeaveMessage(final LeaveMessage leaveMessage) {
 		txtpnChat.setText(txtpnChat.getText() + "\n" + leaveMessage.user.name + " left the chat!");
+
+		removeClient(leaveMessage.user);
 	}
 }

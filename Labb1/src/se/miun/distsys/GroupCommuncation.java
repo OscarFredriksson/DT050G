@@ -73,6 +73,11 @@ public class GroupCommuncation {
 				if (chatMessageListener != null) {
 					chatMessageListener.onIncomingJoinMessage(joinMessage);
 				}
+			} else if (message instanceof LeaveMessage) {
+				LeaveMessage leaveMessage = (LeaveMessage) message;
+				if (chatMessageListener != null) {
+					chatMessageListener.onIncomingLeaveMessage(leaveMessage);
+				}
 			} else {
 				System.out.println("Unknown message type");
 			}
