@@ -5,6 +5,8 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 
 import java.util.HashMap;
+import java.util.Map;
+import java.util.Iterator;
 
 import se.miun.distsys.User;
 
@@ -33,6 +35,8 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 	JFrame frame;
 	JTextPane txtpnChat = new JTextPane();
 	JTextPane txtpnMessage = new JTextPane();
+
+	JTextPane txtpnUsers = new JTextPane();
 
 	GroupCommuncation gc = null;
 
@@ -88,10 +92,10 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 		JScrollPane usersPane = new JScrollPane();
 		usersPane.setPreferredSize(new Dimension(100, 100));
 
-		JTextPane usersTxt = new JTextPane();
-		usersPane.setViewportView(usersTxt);
-		usersTxt.setText("Connected Users:");
-		usersTxt.setEditable(false);
+		// JTextPane usersTxt = new JTextPane();
+		usersPane.setViewportView(txtpnUsers);
+		txtpnUsers.setText("Connected Users:");
+		txtpnUsers.setEditable(false);
 
 		usersPane.setPreferredSize(new Dimension(200, 100));
 
@@ -126,6 +130,7 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 
 		frame.addWindowListener(new java.awt.event.WindowAdapter() {
 			public void windowClosing(final WindowEvent winEvt) {
+				gc.sendLeaveMessage(user);
 				gc.shutdown();
 			}
 		});
@@ -151,6 +156,27 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 		frame.setContentPane(mainPanel);
 	}
 
+	private void updateClientsList() {
+		txtpnUsers.setText("Connected users:");
+
+		Iterator it = users.entrySet().iterator();
+
+		while(it.hasNext())
+		{
+			Map.Entry pair = (Map.Entry)it.next();
+			System.out.println(pair.getKey() + " = " + pair.getValue());
+			txtpnUsers.setText(txtpnUsers.getText() + "\n" + pair.getKey());
+			it.remove();
+		}
+
+	}
+
+	private void addClient(User user) {
+		
+		users.put(user.name, user);
+		updateClientsList();
+	}
+
 	@Override
 	public void actionPerformed(final ActionEvent event) {
 		if (event.getActionCommand().equalsIgnoreCase("send")) {
@@ -165,12 +191,15 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 
 	@Override
 	public void onIncomingStatusMessage(final StatusMessage statusMessage) {
-
+		addClient(statusMessage.user);
 	}
 
 	@Override
 	public void onIncomingJoinMessage(final JoinMessage joinMessage) {
 		txtpnChat.setText(txtpnChat.getText() + "\n" + joinMessage.user.name + " joined the chat!");
+		addClient(joinMessage.user);
+
+		gc.sendStatusMessage(user);
 	}
 
 	@Override
