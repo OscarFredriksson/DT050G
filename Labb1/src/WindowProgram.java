@@ -84,10 +84,9 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 		GridBagConstraints chatConstraints = new GridBagConstraints();
 
 		final JPanel chatPanel = new JPanel(new GridBagLayout());
-		// chatPanel.setLayout(new GridLayout(0, 1, 0, 0));
 
 		chatConstraints.fill = GridBagConstraints.BOTH;
-		chatConstraints.weightx = 1.0;
+		chatConstraints.weightx = 0.5;
 		chatConstraints.weighty = 1.0;
 		chatConstraints.gridy = 1;
 
@@ -97,17 +96,15 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 		chatPanel.add(scrollPane, chatConstraints);
 		scrollPane.setViewportView(txtpnChat);
 		txtpnChat.setEditable(false);
-		// txtpnChat.setText("--== Group Chat ==--");
 
 		JScrollPane usersPane = new JScrollPane();
-		usersPane.setPreferredSize(new Dimension(100, 100));
 
-		// JTextPane usersTxt = new JTextPane();
 		usersPane.setViewportView(txtpnUsers);
 		txtpnUsers.setText("Connected Users:");
 		txtpnUsers.setEditable(false);
 
 		usersPane.setPreferredSize(new Dimension(200, 100));
+		usersPane.setMinimumSize(new Dimension(200, 100));
 
 		GridBagConstraints usersConstraints = new GridBagConstraints();
 
@@ -125,14 +122,15 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 		messageConstraints.fill = GridBagConstraints.HORIZONTAL;
 		messageConstraints.weightx = 1.0;
 
-		// txtpnMessage.setText("Type message here...");
 		txtpnMessage.setPreferredSize(new Dimension(75, 50));
+		txtpnMessage.setMinimumSize(new Dimension(75, 50));
 		sendPanel.add(txtpnMessage, messageConstraints);
 
 		final JButton btnSendChatMessage = new JButton("Send");
 		btnSendChatMessage.addActionListener(this);
 		btnSendChatMessage.setActionCommand("send");
 		btnSendChatMessage.setPreferredSize(new Dimension(75, 50));
+		btnSendChatMessage.setMinimumSize(new Dimension(75, 50));
 
 		sendPanel.add(btnSendChatMessage);
 
@@ -276,7 +274,6 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 				}
 			}
 		}
-
 		messages.add(message);
 	}
 
