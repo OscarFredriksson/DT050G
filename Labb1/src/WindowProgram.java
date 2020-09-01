@@ -16,6 +16,7 @@ import se.miun.distsys.messages.*;
 
 import javax.swing.JButton;
 import javax.swing.JTextPane;
+import javax.swing.*;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -23,14 +24,23 @@ import java.awt.event.WindowEvent;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.*;
+import java.awt.event.KeyEvent;
 
 import javax.swing.JScrollPane;
 
+import java.awt.event.InputEvent;
+
+import java.util.List;
+import java.util.ArrayList;
+
+@SuppressWarnings("serial")
 public class WindowProgram implements ChatMessageListener, ActionListener {
 
 	HashMap<String, User> users = new HashMap<String, User>();
 
-	public User user = new User("Ogge");
+	List<Message> messages = new ArrayList<Message>();
+
+	public User user = new User("Ogge", 0);
 
 	JFrame frame;
 	JTextPane txtpnChat = new JTextPane();
@@ -87,7 +97,7 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 		chatPanel.add(scrollPane, chatConstraints);
 		scrollPane.setViewportView(txtpnChat);
 		txtpnChat.setEditable(false);
-		txtpnChat.setText("--== Group Chat ==--");
+		// txtpnChat.setText("--== Group Chat ==--");
 
 		JScrollPane usersPane = new JScrollPane();
 		usersPane.setPreferredSize(new Dimension(100, 100));
@@ -106,8 +116,6 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 		usersConstraints.gridy = 1;
 
 		chatPanel.add(usersPane, usersConstraints);
-
-		// frame.getContentPane().add(usersPane);
 
 		final JPanel sendPanel = new JPanel();
 		sendPanel.setSize(frame.getSize());
@@ -154,26 +162,56 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 		mainPanel.add(sendPanel, sendConstraints);
 
 		frame.setContentPane(mainPanel);
+
+		initializeMessageEnterSend();
+	}
+
+	private void initializeMessageEnterSend() {
+
+		int condition = JComponent.WHEN_FOCUSED;
+		InputMap iMap = txtpnMessage.getInputMap(condition);
+		ActionMap aMap = txtpnMessage.getActionMap();
+
+		iMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "enter");
+
+		aMap.put("enter", new AbstractAction() {
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				sendChatMessage();
+			}
+		});
+
+		iMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, InputEvent.SHIFT_DOWN_MASK), "shift-enter");
+		aMap.put("shift-enter", new AbstractAction() {
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				txtpnMessage.setText(txtpnMessage.getText() + "\n");
+			}
+		});
 	}
 
 	private void updateClientsList() {
-		
-		System.out.println("\n");
 
 		txtpnUsers.setText("Connected users:");
 
 		Iterator it = users.entrySet().iterator();
 
-		while(it.hasNext())
-		{
-			Map.Entry pair = (Map.Entry)it.next();
-			System.out.println(pair.getKey() + "\t" + pair.getValue());
+		while (it.hasNext()) {
+			Map.Entry pair = (Map.Entry) it.next();
 			txtpnUsers.setText(txtpnUsers.getText() + "\n" + pair.getKey());
 		}
 	}
 
+	private void sendChatMessage() {
+		user.clock++;
+		gc.sendChatMessage(txtpnMessage.getText(), user);
+		txtpnMessage.setText("");
+	}
+
 	private void addClient(User user) {
-		
+
 		users.put(user.name, user);
 		updateClientsList();
 	}
@@ -183,38 +221,109 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 		updateClientsList();
 	}
 
+	private void refreshMessagePane() {
+
+		txtpnChat.setText("");
+
+		for (int i = 0; i < messages.size(); i++) {
+
+			if (messages.get(i) instanceof ChatMessage) {
+
+				ChatMessage message = (ChatMessage) messages.get(i);
+
+				appendToChat(message.user.clock + " " + message.user.name + ": " + message.chat);
+
+			} else if (messages.get(i) instanceof JoinMessage) {
+
+				JoinMessage message = (JoinMessage) messages.get(i);
+
+				appendToChat(message.user.name + " joined the chat!");
+
+			} else if (messages.get(i) instanceof LeaveMessage) {
+
+				LeaveMessage message = (LeaveMessage) messages.get(i);
+
+				appendToChat(message.user.name + " left the chat.");
+			}
+
+		}
+	}
+
+	private void appendToChat(String message) {
+
+		if (txtpnChat.getText().equals("")) {
+			txtpnChat.setText(message);
+		} else
+			txtpnChat.setText(txtpnChat.getText() + "\n" + message);
+	}
+
+	private void updateClock(int newClock) {
+		if (newClock > user.clock)
+			user.clock = newClock;
+	}
+
+	private void insertMessage(ChatMessage message) {
+
+		for (int i = 0; i < messages.size(); i++) {
+
+			if (messages.get(i) instanceof ChatMessage) {
+
+				ChatMessage iterMessage = (ChatMessage) messages.get(i);
+
+				if (iterMessage.user.clock >= message.user.clock) {
+					messages.add(i, message);
+					return;
+				}
+			}
+		}
+
+		messages.add(message);
+	}
+
 	@Override
 	public void actionPerformed(final ActionEvent event) {
 		if (event.getActionCommand().equalsIgnoreCase("send")) {
-			gc.sendChatMessage(txtpnMessage.getText());
+			sendChatMessage();
 		}
 	}
 
 	@Override
 	public void onIncomingChatMessage(final ChatMessage chatMessage) {
-		System.out.println("incoming chat message...");
-		txtpnChat.setText(txtpnChat.getText() + "\n" + chatMessage.chat);
+
+		insertMessage(chatMessage);
+
+		updateClock(chatMessage.user.clock);
+
+		refreshMessagePane();
 	}
 
 	@Override
 	public void onIncomingStatusMessage(final StatusMessage statusMessage) {
-		System.out.println("status message");
+
 		addClient(statusMessage.user);
+
+		updateClock(statusMessage.user.clock);
 	}
 
 	@Override
 	public void onIncomingJoinMessage(final JoinMessage joinMessage) {
-		System.out.println("join message");
-		txtpnChat.setText(txtpnChat.getText() + "\n" + joinMessage.user.name + " joined the chat!");
+
+		messages.add(joinMessage);
+
 		addClient(joinMessage.user);
 
 		gc.sendStatusMessage(user);
+
+		refreshMessagePane();
 	}
 
 	@Override
 	public void onIncomingLeaveMessage(final LeaveMessage leaveMessage) {
-		txtpnChat.setText(txtpnChat.getText() + "\n" + leaveMessage.user.name + " left the chat!");
+
+		messages.add(leaveMessage);
 
 		removeClient(leaveMessage.user);
+
+		refreshMessagePane();
 	}
 }

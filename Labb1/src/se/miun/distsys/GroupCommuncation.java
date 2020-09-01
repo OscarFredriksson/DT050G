@@ -16,7 +16,6 @@ public class GroupCommuncation {
 	boolean runGroupCommuncation = true;
 	MessageSerializer messageSerializer = new MessageSerializer();
 
-	// Listeners
 	ChatMessageListener chatMessageListener = null;
 
 	public GroupCommuncation() {
@@ -114,9 +113,9 @@ public class GroupCommuncation {
 		}
 	}
 
-	public void sendChatMessage(String chat) {
+	public void sendChatMessage(String chat, User user) {
 		try {
-			ChatMessage chatMessage = new ChatMessage(chat);
+			ChatMessage chatMessage = new ChatMessage(chat, user);
 			byte[] data = messageSerializer.serializeMessage(chatMessage);
 			sendData(data);
 		} catch (Exception e) {
