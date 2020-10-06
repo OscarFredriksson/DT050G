@@ -89,10 +89,9 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 
 		mainPanel.setLayout(new GridLayout(0, 1));
 
-		JTextPane txtpnTitle = new JTextPane();
-		txtpnTitle.setText("Enter your username:");
-		txtpnTitle.setEditable(false);
-		mainPanel.add(txtpnTitle);
+		JLabel labelTitle = new JLabel();
+		labelTitle.setText("Enter your username:");
+		mainPanel.add(labelTitle);
 
 		txtpnUsername.setPreferredSize(new Dimension(200, 25));
 		txtpnUsername.setMinimumSize(new Dimension(200, 50));
@@ -267,7 +266,7 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 
 				ChatMessage message = (ChatMessage) messages.get(i);
 
-				appendToChat(message.user.clock + " " + message.user.name + ": " + message.chat);
+				appendToChat(message.user.name + ": " + message.chat);
 
 			} else if (messages.get(i) instanceof JoinMessage) {
 
