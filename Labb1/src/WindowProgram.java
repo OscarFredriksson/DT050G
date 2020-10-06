@@ -33,9 +33,6 @@ import java.awt.event.InputEvent;
 import java.util.List;
 import java.util.ArrayList;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-
 @SuppressWarnings("serial")
 public class WindowProgram implements ChatMessageListener, ActionListener {
 
