@@ -33,6 +33,9 @@ import java.awt.event.InputEvent;
 import java.util.List;
 import java.util.ArrayList;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+
 @SuppressWarnings("serial")
 public class WindowProgram implements ChatMessageListener, ActionListener {
 
@@ -40,13 +43,15 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 
 	List<Message> messages = new ArrayList<Message>();
 
-	public User user = new User("Ogge", 0);
+	public User user;
 
-	JFrame frame;
+	JFrame chatFrame;
 	JTextPane txtpnChat = new JTextPane();
 	JTextPane txtpnMessage = new JTextPane();
-
 	JTextPane txtpnUsers = new JTextPane();
+
+	JFrame joinFrame;
+	JTextPane txtpnUsername = new JTextPane();
 
 	GroupCommuncation gc = null;
 
@@ -55,7 +60,7 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 			public void run() {
 				try {
 					final WindowProgram window = new WindowProgram();
-					window.frame.setVisible(true);
+					window.chatFrame.setVisible(false);
 				} catch (final Exception e) {
 					e.printStackTrace();
 				}
@@ -64,19 +69,54 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 	}
 
 	public WindowProgram() {
-		initializeFrame();
 
-		gc = new GroupCommuncation();
-		gc.sendJoinMessage(user);
-		gc.setChatMessageListener(this);
-		System.out.println("Group Communcation Started");
+		initializeChatFrame();
+
+		initializeJoinFrame();
+
+		chatFrame.setVisible(false);
+		joinFrame.setVisible(true);
 	}
 
-	private void initializeFrame() {
-		frame = new JFrame();
-		frame.setBounds(100, 100, 450, 300);
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		frame.getContentPane().setLayout(new GridLayout(0, 1, 0, 0));
+	private void initializeJoinFrame() {
+		joinFrame = new JFrame();
+		joinFrame.setBounds(100, 100, 300, 300);
+		joinFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		joinFrame.getContentPane().setLayout(new GridLayout(0, 1, 0, 0));
+		joinFrame.setMaximumSize(new Dimension(300, 200));
+		JPanel mainPanel = new JPanel();
+
+		mainPanel.setPreferredSize(new Dimension(200, 100));
+		mainPanel.setMinimumSize(new Dimension(200, 100));
+		mainPanel.setMaximumSize(new Dimension(200, 100));
+
+		mainPanel.setLayout(new GridLayout(0, 1));
+
+		JTextPane txtpnTitle = new JTextPane();
+		txtpnTitle.setText("Enter your username:");
+		txtpnTitle.setEditable(false);
+		mainPanel.add(txtpnTitle);
+
+		txtpnUsername.setPreferredSize(new Dimension(200, 25));
+		txtpnUsername.setMinimumSize(new Dimension(200, 50));
+		mainPanel.add(txtpnUsername);
+
+		joinFrame.setContentPane(mainPanel);
+
+		final JButton btnJoin = new JButton("join");
+		btnJoin.addActionListener(this);
+		btnJoin.setActionCommand("join");
+		btnJoin.setPreferredSize(new Dimension(75, 50));
+		btnJoin.setMinimumSize(new Dimension(75, 50));
+		btnJoin.setMaximumSize(new Dimension(75, 50));
+		mainPanel.add(btnJoin);
+	}
+
+	private void initializeChatFrame() {
+		chatFrame = new JFrame();
+		chatFrame.setBounds(100, 100, 450, 300);
+		chatFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		chatFrame.getContentPane().setLayout(new GridLayout(0, 1, 0, 0));
 
 		final JPanel mainPanel = new JPanel();
 		mainPanel.setLayout(new GridBagLayout());
@@ -98,6 +138,7 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 		txtpnChat.setEditable(false);
 
 		JScrollPane usersPane = new JScrollPane();
+		chatFrame.setContentPane(usersPane);
 
 		usersPane.setViewportView(txtpnUsers);
 		txtpnUsers.setText("Connected Users:");
@@ -115,7 +156,7 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 		chatPanel.add(usersPane, usersConstraints);
 
 		final JPanel sendPanel = new JPanel();
-		sendPanel.setSize(frame.getSize());
+		sendPanel.setSize(chatFrame.getSize());
 		sendPanel.setLayout(new GridBagLayout());
 		final GridBagConstraints messageConstraints = new GridBagConstraints();
 
@@ -134,7 +175,7 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 
 		sendPanel.add(btnSendChatMessage);
 
-		frame.addWindowListener(new java.awt.event.WindowAdapter() {
+		chatFrame.addWindowListener(new java.awt.event.WindowAdapter() {
 			public void windowClosing(final WindowEvent winEvt) {
 				gc.sendLeaveMessage(user);
 				gc.shutdown();
@@ -159,7 +200,7 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 
 		mainPanel.add(sendPanel, sendConstraints);
 
-		frame.setContentPane(mainPanel);
+		chatFrame.setContentPane(mainPanel);
 
 		initializeMessageEnterSend();
 	}
@@ -194,10 +235,10 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 
 		txtpnUsers.setText("Connected users:");
 
-		Iterator it = users.entrySet().iterator();
+		Iterator<Map.Entry<String, User>> it = users.entrySet().iterator();
 
 		while (it.hasNext()) {
-			Map.Entry pair = (Map.Entry) it.next();
+			Map.Entry<String, User> pair = (Map.Entry<String, User>) it.next();
 			txtpnUsers.setText(txtpnUsers.getText() + "\n" + pair.getKey());
 		}
 	}
@@ -277,10 +318,27 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 		messages.add(message);
 	}
 
+	private void openChat() {
+
+		user = new User(txtpnUsername.getText(), 0);
+
+		joinFrame.setVisible(false);
+		chatFrame.setVisible(true);
+
+		gc = new GroupCommuncation();
+		gc.sendJoinMessage(user);
+		gc.setChatMessageListener(this);
+		System.out.println("Group Communcation Started");
+	}
+
 	@Override
 	public void actionPerformed(final ActionEvent event) {
 		if (event.getActionCommand().equalsIgnoreCase("send")) {
 			sendChatMessage();
+		}
+		if (event.getActionCommand().equalsIgnoreCase("join")) {
+
+			openChat();
 		}
 	}
 
