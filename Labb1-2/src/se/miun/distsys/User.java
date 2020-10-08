@@ -2,14 +2,17 @@ package se.miun.distsys;
 
 import java.io.Serializable;
 
+import java.util.Map;
+import java.util.HashMap;
+
 @SuppressWarnings("serial")
 public class User implements Serializable {
     public String name;
 
-    public int clock = 0;
+    public HashMap<String, Integer> clocks = new HashMap<String, Integer>();
 
-    public User(String name, int clock) {
+    public User(String name) {
         this.name = name;
-        this.clock = clock;
+        clocks.put(name, 0);
     }
 }
