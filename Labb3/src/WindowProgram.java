@@ -265,12 +265,14 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 	private void removeClient(User user) {
 		users.remove(user.name);
 
-		Iterator<Map.Entry<String, User>> it = users.entrySet().iterator();
+		this.user.clocks.remove(user.name);
 
-		while (it.hasNext()) {
-			Map.Entry<String, User> pair = (Map.Entry<String, User>) it.next();
-			users.get(pair.getKey()).clocks.remove(user.name);
-		}
+		// Iterator<Map.Entry<String, User>> it = users.entrySet().iterator();
+
+		// while (it.hasNext()) {
+		// Map.Entry<String, User> pair = (Map.Entry<String, User>) it.next();
+		// users.get(pair.getKey()).clocks.remove(user.name);
+		// }
 
 		updateClientsList();
 	}
@@ -392,6 +394,8 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 
 				if (!this.assignMessageReceived) {
 
+					this.assignMessageReceived = true;
+
 					System.out.println("new coordinator created");
 
 					this.user = new Coordinator(username, 0, 0);
@@ -420,7 +424,7 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 
 	@Override
 	public void onIncomingAssignMessage(AssignMessage assignMessage) {
-		if (this.user == null) {
+		if (this.user == null && !this.assignMessageReceived) {
 
 			System.out.println("received assign message...");
 
@@ -442,6 +446,9 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 	@Override
 	public void onIncomingChatMessage(final ChatMessage chatMessage) {
 
+		if (!this.assignMessageReceived)
+			return;
+
 		if (!validateClocks(chatMessage.user)) {
 			System.out.println("System is no longer in sync :(");
 
@@ -455,13 +462,16 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 
 	@Override
 	public void onIncomingStatusMessage(final StatusMessage statusMessage) {
-
+		if (!this.assignMessageReceived)
+			return;
 		addClient(statusMessage.user);
 		user.clocks.put(statusMessage.user.name, statusMessage.user.clocks.get(statusMessage.user.name));
 	}
 
 	@Override
 	public void onIncomingJoinMessage(final JoinMessage joinMessage) {
+		if (!this.assignMessageReceived)
+			return;
 
 		messages.add(joinMessage);
 
@@ -474,6 +484,8 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 
 	@Override
 	public void onIncomingLeaveMessage(final LeaveMessage leaveMessage) {
+		if (!this.assignMessageReceived)
+			return;
 
 		messages.add(leaveMessage);
 
