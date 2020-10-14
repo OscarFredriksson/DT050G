@@ -1,8 +1,9 @@
 package se.miun.distsys;
 
 import java.io.Serializable;
-
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 @SuppressWarnings("serial")
 public class User implements Serializable {
@@ -10,11 +11,13 @@ public class User implements Serializable {
 
     public int processId;
 
-    public HashMap<String, Integer> clocks = new HashMap<String, Integer>();
+    public transient HashMap<String, User> users = new HashMap<String, User>();
+
+    public transient List<Integer> sequenceList = new ArrayList<Integer>();
 
     public User(String name, int processId) {
         this.name = name;
         this.processId = processId;
-        clocks.put(name, 0);
+        // users.put(name, 0);
     }
 }

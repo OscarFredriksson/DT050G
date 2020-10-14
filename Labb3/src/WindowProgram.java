@@ -4,7 +4,6 @@ import java.awt.EventQueue;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Iterator;
 
@@ -13,6 +12,10 @@ import se.miun.distsys.Coordinator;
 import se.miun.distsys.GroupCommuncation;
 import se.miun.distsys.listeners.ChatMessageListener;
 import se.miun.distsys.messages.*;
+import se.miun.distsys.messages.CoordinatorMessages.GenerateSequenceNumberMessage;
+import se.miun.distsys.messages.CoordinatorMessages.GetUserIDMessage;
+import se.miun.distsys.messages.CoordinatorMessages.SequenceNumberMessage;
+import se.miun.distsys.messages.CoordinatorMessages.UserIDMessage;
 
 import javax.swing.JButton;
 import javax.swing.JTextPane;
@@ -37,7 +40,7 @@ import java.util.ArrayList;
 @SuppressWarnings("serial")
 public class WindowProgram implements ChatMessageListener, ActionListener {
 
-	HashMap<String, User> users = new HashMap<String, User>();
+	// HashMap<String, User> users = new HashMap<String, User>();
 
 	List<Message> messages = new ArrayList<Message>();
 
@@ -237,7 +240,7 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 
 		txtpnUsers.setText("Connected users:");
 
-		Iterator<Map.Entry<String, User>> it = users.entrySet().iterator();
+		Iterator<Map.Entry<String, User>> it = this.user.users.entrySet().iterator();
 
 		while (it.hasNext()) {
 			Map.Entry<String, User> pair = (Map.Entry<String, User>) it.next();
@@ -246,33 +249,24 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 	}
 
 	private void sendChatMessage() {
-		// user.clock++;
 
-		int clock = this.user.clocks.get(this.user.name);
-		clock++;
-		this.user.clocks.put(this.user.name, clock);
+		// PLACEHOLDER, RETREIVE FROM COORDINATOR
+		int sequenceNumber = 0;
 
-		gc.sendChatMessage(txtpnMessage.getText(), user);
+		gc.sendChatMessage(txtpnMessage.getText(), user, sequenceNumber);
 		txtpnMessage.setText("");
 	}
 
 	private void addClient(User user) {
 
-		users.put(user.name, user);
+		this.user.users.put(user.name, user);
 		updateClientsList();
 	}
 
 	private void removeClient(User user) {
-		users.remove(user.name);
+		this.user.users.remove(user.name);
 
-		this.user.clocks.remove(user.name);
-
-		// Iterator<Map.Entry<String, User>> it = users.entrySet().iterator();
-
-		// while (it.hasNext()) {
-		// Map.Entry<String, User> pair = (Map.Entry<String, User>) it.next();
-		// users.get(pair.getKey()).clocks.remove(user.name);
-		// }
+		// this.user.clocks.remove(user.name);
 
 		updateClientsList();
 	}
@@ -344,19 +338,19 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 	// messages.add(message);
 	// }
 
-	private boolean validateClocks(User other) {
-		if (other.name.equals(user.name)) {
-			return true;
-		}
-		int myclock = user.clocks.get(other.name);
-		int otherclock = other.clocks.get(other.name);
+	// private boolean validateClocks(User other) {
+	// if (other.name.equals(user.name)) {
+	// return true;
+	// }
+	// int myclock = user.clocks.get(other.name);
+	// int otherclock = other.clocks.get(other.name);
 
-		if (myclock + 1 == otherclock) {
-			user.clocks.put(other.name, otherclock);
-			return user.clocks.equals(other.clocks);
-		}
-		return false;
-	}
+	// if (myclock + 1 == otherclock) {
+	// user.clocks.put(other.name, otherclock);
+	// return user.clocks.equals(other.clocks);
+	// }
+	// return false;
+	// }
 
 	private void openChat() {
 
@@ -398,7 +392,7 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 
 					System.out.println("new coordinator created");
 
-					this.user = new Coordinator(username, 0, 0);
+					this.user = new Coordinator(user, 0);
 
 					openChat();
 				}
@@ -449,15 +443,15 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 		if (!this.assignMessageReceived)
 			return;
 
-		if (!validateClocks(chatMessage.user)) {
-			System.out.println("System is no longer in sync :(");
+		// if (!validateClocks(chatMessage.user)) {
+		// System.out.println("System is no longer in sync :(");
 
-		} else {
+		// } else {
 
-			messages.add(chatMessage);
+		messages.add(chatMessage);
 
-			refreshMessagePane();
-		}
+		refreshMessagePane();
+		// }
 	}
 
 	@Override
@@ -465,7 +459,8 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 		if (!this.assignMessageReceived)
 			return;
 		addClient(statusMessage.user);
-		user.clocks.put(statusMessage.user.name, statusMessage.user.clocks.get(statusMessage.user.name));
+		// user.clocks.put(statusMessage.user.name,
+		// statusMessage.user.clocks.get(statusMessage.user.name));
 	}
 
 	@Override
@@ -492,5 +487,29 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 		removeClient(leaveMessage.user);
 
 		refreshMessagePane();
+	}
+
+	@Override
+	public void onIncomingGenerateSequenceNumberMessage(GenerateSequenceNumberMessage generateSequenceNumberMessage) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void onIncomingGetUserIDMessageMessage(GetUserIDMessage getUserIDMessage) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void onIncomingSequenceNumberMessage(SequenceNumberMessage sequenceNumberMessage) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void onIncomingUserIDMessage(UserIDMessage userIDMessage) {
+		// TODO Auto-generated method stub
+
 	}
 }

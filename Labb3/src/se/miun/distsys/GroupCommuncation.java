@@ -7,6 +7,10 @@ import java.net.MulticastSocket;
 
 import se.miun.distsys.listeners.ChatMessageListener;
 import se.miun.distsys.messages.*;
+import se.miun.distsys.messages.CoordinatorMessages.GenerateSequenceNumberMessage;
+import se.miun.distsys.messages.CoordinatorMessages.GetUserIDMessage;
+import se.miun.distsys.messages.CoordinatorMessages.SequenceNumberMessage;
+import se.miun.distsys.messages.CoordinatorMessages.UserIDMessage;
 
 public class GroupCommuncation {
 
@@ -88,6 +92,30 @@ public class GroupCommuncation {
 				if (chatMessageListener != null) {
 					chatMessageListener.onIncomingAssignMessage(assignMessage);
 				}
+			} else if (message instanceof GenerateSequenceNumberMessage) {
+
+				GenerateSequenceNumberMessage generateSequenceNumberMessage = (GenerateSequenceNumberMessage) message;
+				if (chatMessageListener != null) {
+					chatMessageListener.onIncomingGenerateSequenceNumberMessage(generateSequenceNumberMessage);
+				}
+			} else if (message instanceof SequenceNumberMessage) {
+
+				SequenceNumberMessage sequenceNumberMessage = (SequenceNumberMessage) message;
+				if (chatMessageListener != null) {
+					chatMessageListener.onIncomingSequenceNumberMessage(sequenceNumberMessage);
+				}
+			} else if (message instanceof GetUserIDMessage) {
+
+				GetUserIDMessage getUserIDMessage = (GetUserIDMessage) message;
+				if (chatMessageListener != null) {
+					chatMessageListener.onIncomingGetUserIDMessageMessage(getUserIDMessage);
+				}
+			} else if (message instanceof UserIDMessage) {
+
+				UserIDMessage userIDMessage = (UserIDMessage) message;
+				if (chatMessageListener != null) {
+					chatMessageListener.onIncomingUserIDMessage(userIDMessage);
+				}
 			} else {
 				System.out.println("Unknown message type");
 			}
@@ -96,68 +124,112 @@ public class GroupCommuncation {
 	}
 
 	public void sendAuthMessage(String username) {
-		try {
-			AuthMessage authMessage = new AuthMessage(username);
-			byte[] data = messageSerializer.serializeMessage(authMessage);
-			sendData(data);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		// try {
+		AuthMessage authMessage = new AuthMessage(username);
+		sendMessage(authMessage);
+		// byte[] data = messageSerializer.serializeMessage(authMessage);
+		// sendData(data);
+		// } catch (Exception e) {
+		// e.printStackTrace();
+		// }
 	}
 
 	public void sendAssignMessage(int processId) {
-		try {
-			AssignMessage assignMessage = new AssignMessage(processId);
-			byte[] data = messageSerializer.serializeMessage(assignMessage);
-			sendData(data);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		// try {
+		AssignMessage assignMessage = new AssignMessage(processId);
+		sendMessage(assignMessage);
+		// byte[] data = messageSerializer.serializeMessage(assignMessage);
+		// sendData(data);
+		// } catch (Exception e) {
+		// e.printStackTrace();
+		// }
 	}
 
 	public void sendLeaveMessage(User user) {
-		try {
-			LeaveMessage leaveMessage = new LeaveMessage(user);
-			byte[] data = messageSerializer.serializeMessage(leaveMessage);
-			sendData(data);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		// try {
+		LeaveMessage leaveMessage = new LeaveMessage(user);
+		sendMessage(leaveMessage);
+		// byte[] data = messageSerializer.serializeMessage(leaveMessage);
+		// sendData(data);
+		// } catch (Exception e) {
+		// e.printStackTrace();
+		// }
 	}
 
 	public void sendStatusMessage(User user) {
-		try {
-			StatusMessage statusMessage = new StatusMessage(user);
-			byte[] data = messageSerializer.serializeMessage(statusMessage);
-			sendData(data);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		// try {
+		StatusMessage statusMessage = new StatusMessage(user);
+		sendMessage(statusMessage);
+		// byte[] data = messageSerializer.serializeMessage(statusMessage);
+		// sendData(data);
+		// } catch (Exception e) {
+		// e.printStackTrace();
+		// }
 	}
 
 	public void sendJoinMessage(User user) {
 
-		try {
-			JoinMessage joinMessage = new JoinMessage(user);
-			byte[] data = messageSerializer.serializeMessage(joinMessage);
-			sendData(data);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		// try {
+		JoinMessage joinMessage = new JoinMessage(user);
+		sendMessage(joinMessage);
+		// byte[] data = messageSerializer.serializeMessage(joinMessage);
+		// sendData(data);
+		// } catch (Exception e) {
+		// e.printStackTrace();
+		// }
 	}
 
-	public void sendChatMessage(String chat, User user) {
-		try {
-			ChatMessage chatMessage = new ChatMessage(chat, user);
-			byte[] data = messageSerializer.serializeMessage(chatMessage);
-			sendData(data);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+	public void sendChatMessage(String message, User user, int sequenceNumber) {
+
+		// try {
+		ChatMessage chatMessage = new ChatMessage(message, user, sequenceNumber);
+		sendMessage(chatMessage);
+		// byte[] data = messageSerializer.serializeMessage(joinMessage);
+		// sendData(data);
+		// } catch (Exception e) {
+		// e.printStackTrace();
+		// }
+	}
+
+	public void sendGenerateSequenceNumberMessage(int authorId) {
+		// try {
+		GenerateSequenceNumberMessage generateSequenceNumberMessage = new GenerateSequenceNumberMessage(authorId);
+		sendMessage(generateSequenceNumberMessage);
+		// byte[] data =
+		// messageSerializer.serializeMessage(generateSequenceNumberMessage);
+		// sendData(data);
+		// } catch (Exception e) {
+		// e.printStackTrace();
+		// }
+	}
+
+	public void sendSequenceNumberMessage(int sequenceNumber, int recipientId) {
+		SequenceNumberMessage sequenceNumberMessage = new SequenceNumberMessage(sequenceNumber, recipientId);
+		sendMessage(sequenceNumberMessage);
+	}
+
+	public void sendGetUserIDMessage(int sequenceNumber, int authorId) {
+		GetUserIDMessage getUserIDMessage = new GetUserIDMessage(sequenceNumber, authorId);
+		sendMessage(getUserIDMessage);
+	}
+
+	public void sendUserIDMessage(int userId, int authorId) {
+
+		UserIDMessage userIDMessage = new UserIDMessage(userId, authorId);
+		sendMessage(userIDMessage);
 	}
 
 	public void setChatMessageListener(ChatMessageListener listener) {
 		this.chatMessageListener = listener;
+	}
+
+	private void sendMessage(Message message) {
+		try {
+			byte[] data = messageSerializer.serializeMessage(message);
+			sendData(data);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	private void sendData(byte[] data) {
