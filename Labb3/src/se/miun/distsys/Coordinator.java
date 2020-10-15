@@ -3,7 +3,8 @@ package se.miun.distsys;
 @SuppressWarnings("serial")
 public class Coordinator extends User {
 
-    int processIdCounter;
+    private static int invalidUsername = -1;
+    public int processIdCounter = 0;
 
     public Coordinator(User user, int processIdCounter) {
         super(user.name, user.processId);
@@ -17,7 +18,7 @@ public class Coordinator extends User {
             if (this.users.get(username) == null)
                 return ++processIdCounter;
         }
-        return -1;
+        return invalidUsername;
     }
 
     public int getSequenceNumber(int processId) {
@@ -29,7 +30,7 @@ public class Coordinator extends User {
         return nextSequenceNumber;
     }
 
-    public int getProcessIdFromSequenceNumber(int sequenceNumber) {
+    public int getUserIdFromSequenceNumber(int sequenceNumber) {
         int processId = 0;
         synchronized (sequenceList) {
             processId = sequenceList.get(sequenceNumber);

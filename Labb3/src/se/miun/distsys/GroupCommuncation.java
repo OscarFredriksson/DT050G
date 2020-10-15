@@ -4,18 +4,10 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.util.ArrayList;
 
 import se.miun.distsys.listeners.ChatMessageListener;
 import se.miun.distsys.messages.*;
-import se.miun.distsys.messages.ChatMessages.*;
-import se.miun.distsys.messages.ConnectMessages.*;
-import se.miun.distsys.messages.CoordinatorMessages.GenerateSequenceNumberMessage;
-import se.miun.distsys.messages.CoordinatorMessages.GetUserIDMessage;
-import se.miun.distsys.messages.CoordinatorMessages.SequenceNumberMessage;
-import se.miun.distsys.messages.CoordinatorMessages.UserIDMessage;
-import se.miun.distsys.messages.ElectionMessages.AliveMessage;
-import se.miun.distsys.messages.ElectionMessages.ElectionMessage;
-import se.miun.distsys.messages.ElectionMessages.VictoryMessage;
 
 public class GroupCommuncation {
 
@@ -109,15 +101,15 @@ public class GroupCommuncation {
 				if (chatMessageListener != null) {
 					chatMessageListener.onIncomingSequenceNumberMessage(sequenceNumberMessage);
 				}
-			} else if (message instanceof GetUserIDMessage) {
+			} else if (message instanceof GetUserIdMessage) {
 
-				GetUserIDMessage getUserIDMessage = (GetUserIDMessage) message;
+				GetUserIdMessage getUserIDMessage = (GetUserIdMessage) message;
 				if (chatMessageListener != null) {
 					chatMessageListener.onIncomingGetUserIDMessage(getUserIDMessage);
 				}
-			} else if (message instanceof UserIDMessage) {
+			} else if (message instanceof UserIdMessage) {
 
-				UserIDMessage userIDMessage = (UserIDMessage) message;
+				UserIdMessage userIDMessage = (UserIdMessage) message;
 				if (chatMessageListener != null) {
 					chatMessageListener.onIncomingUserIDMessage(userIDMessage);
 				}
@@ -157,9 +149,9 @@ public class GroupCommuncation {
 		// }
 	}
 
-	public void sendAssignMessage(int processId) {
+	public void sendAssignMessage(int processId, ArrayList<Integer> history, ArrayList<Message> chatHistory) {
 		// try {
-		AssignMessage assignMessage = new AssignMessage(processId);
+		AssignMessage assignMessage = new AssignMessage(processId, history, chatHistory);
 		sendMessage(assignMessage);
 		// byte[] data = messageSerializer.serializeMessage(assignMessage);
 		// sendData(data);
@@ -232,13 +224,13 @@ public class GroupCommuncation {
 	}
 
 	public void sendGetUserIDMessage(int sequenceNumber, int authorId) {
-		GetUserIDMessage getUserIDMessage = new GetUserIDMessage(sequenceNumber, authorId);
+		GetUserIdMessage getUserIDMessage = new GetUserIdMessage(sequenceNumber, authorId);
 		sendMessage(getUserIDMessage);
 	}
 
 	public void sendUserIDMessage(int userId, int recipientId) {
 
-		UserIDMessage userIDMessage = new UserIDMessage(userId, recipientId);
+		UserIdMessage userIDMessage = new UserIdMessage(userId, recipientId);
 		sendMessage(userIDMessage);
 	}
 

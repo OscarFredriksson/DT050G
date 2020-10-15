@@ -1,7 +1,6 @@
-package se.miun.distsys.messages.ChatMessages;
+package se.miun.distsys.messages;
 
 import se.miun.distsys.User;
-import se.miun.distsys.messages.Message;
 
 @SuppressWarnings("serial")
 public class ChatMessage extends Message {

@@ -1,14 +1,6 @@
 package se.miun.distsys.listeners;
 
-import se.miun.distsys.messages.ChatMessages.*;
-import se.miun.distsys.messages.ConnectMessages.*;
-import se.miun.distsys.messages.CoordinatorMessages.GenerateSequenceNumberMessage;
-import se.miun.distsys.messages.CoordinatorMessages.GetUserIDMessage;
-import se.miun.distsys.messages.CoordinatorMessages.SequenceNumberMessage;
-import se.miun.distsys.messages.CoordinatorMessages.UserIDMessage;
-import se.miun.distsys.messages.ElectionMessages.AliveMessage;
-import se.miun.distsys.messages.ElectionMessages.ElectionMessage;
-import se.miun.distsys.messages.ElectionMessages.VictoryMessage;
+import se.miun.distsys.messages.*;
 
 public interface ChatMessageListener {
     public void onIncomingChatMessage(ChatMessage chatMessage);
@@ -25,11 +17,11 @@ public interface ChatMessageListener {
 
     public void onIncomingGenerateSequenceNumberMessage(GenerateSequenceNumberMessage generateSequenceNumberMessage);
 
-    public void onIncomingGetUserIDMessage(GetUserIDMessage getUserIDMessage);
+    public void onIncomingGetUserIDMessage(GetUserIdMessage getUserIDMessage);
 
     public void onIncomingSequenceNumberMessage(SequenceNumberMessage sequenceNumberMessage);
 
-    public void onIncomingUserIDMessage(UserIDMessage userIDMessage);
+    public void onIncomingUserIDMessage(UserIdMessage userIDMessage);
 
     public void onIncomingAliveMessage(AliveMessage aliveMessage);
 

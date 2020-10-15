@@ -1,6 +1,4 @@
-package se.miun.distsys.messages.ChatMessages;
-
-import se.miun.distsys.messages.*;
+package se.miun.distsys.messages;
 
 import se.miun.distsys.User;
 

@@ -1,6 +1,4 @@
-package se.miun.distsys.messages.ElectionMessages;
-
-import se.miun.distsys.messages.Message;
+package se.miun.distsys.messages;
 
 @SuppressWarnings("serial")
 public class AliveMessage extends Message {

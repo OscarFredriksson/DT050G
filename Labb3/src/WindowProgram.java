@@ -12,15 +12,6 @@ import se.miun.distsys.Coordinator;
 import se.miun.distsys.GroupCommuncation;
 import se.miun.distsys.listeners.ChatMessageListener;
 import se.miun.distsys.messages.*;
-import se.miun.distsys.messages.ChatMessages.*;
-import se.miun.distsys.messages.ConnectMessages.*;
-import se.miun.distsys.messages.CoordinatorMessages.GenerateSequenceNumberMessage;
-import se.miun.distsys.messages.CoordinatorMessages.GetUserIDMessage;
-import se.miun.distsys.messages.CoordinatorMessages.SequenceNumberMessage;
-import se.miun.distsys.messages.CoordinatorMessages.UserIDMessage;
-import se.miun.distsys.messages.ElectionMessages.AliveMessage;
-import se.miun.distsys.messages.ElectionMessages.ElectionMessage;
-import se.miun.distsys.messages.ElectionMessages.VictoryMessage;
 
 import javax.swing.JButton;
 import javax.swing.JTextPane;
@@ -39,15 +30,17 @@ import javax.swing.JScrollPane;
 
 import java.awt.event.InputEvent;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 @SuppressWarnings("serial")
 public class WindowProgram implements ChatMessageListener, ActionListener {
 
 	// HashMap<String, User> users = new HashMap<String, User>();
 
-	List<Message> messages = new ArrayList<Message>();
+	ArrayList<Message> messages = new ArrayList<Message>();
+
+	public HashMap<Integer, ChatMessage> misses = new HashMap<Integer, ChatMessage>();
 
 	public User user;
 
@@ -68,7 +61,7 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 	int getSequenceNumberResult;
 
 	boolean expectsUserIDMessage = false;
-	UserIDMessage receivedUserIdMessage = null;
+	UserIdMessage receivedUserIdMessage = null;
 
 	boolean expectsAliveMessage = false;
 	AliveMessage receivedAliveMessage = null;
@@ -311,8 +304,22 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 								"id: " + user.processId + " no sequence number recieved, starting election...");
 
 						doElection();
+						// return;
+
+						while (receivedVictoryMessage == null) {
+							try {
+								System.out.println("waiting for election to be done...");
+								Thread.sleep(50);
+							} catch (InterruptedException e) {
+								e.printStackTrace();
+							}
+						}
+
+						getSequenceNumberResult = isCoordinator() ? getSequenceNumberAsCoordinator()
+								: getSequenceNumberAsUser();
 						return;
 					}
+
 					i++;
 				}
 
@@ -420,7 +427,7 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 
 				ChatMessage message = (ChatMessage) messages.get(i);
 
-				txtpnChat.setText(txtpnChat.getText() + "\n" + message);
+				// txtpnChat.setText(txtpnChat.getText() + "\n");
 				appendToChat(message.user.name + ": " + message.chat);
 
 			} else if (messages.get(i) instanceof JoinMessage) {
@@ -500,7 +507,7 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 
 			System.out.println("sending assign message...");
 
-			gc.sendAssignMessage(processId);
+			gc.sendAssignMessage(processId, this.user.sequenceList, this.messages);
 		}
 	}
 
@@ -520,15 +527,62 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 				System.out.println("processId: " + assignMessage.processId);
 
 				this.user = new User(txtpnUsername.getText(), assignMessage.processId);
+
+				this.user.sequenceList = assignMessage.history;
+				this.messages = assignMessage.chatHistory;
 				openChat();
 			}
 		}
 	}
 
+	public int getLastSequenceNumber() {
+		int lastSequenceNumber = 0;
+
+		for (int i = messages.size() - 1; i >= 0; i--) {
+			if (messages.get(i) instanceof ChatMessage) {
+				ChatMessage chatMessage = (ChatMessage) messages.get(i);
+
+				lastSequenceNumber = chatMessage.sequenceNumber;
+				break;
+			}
+		}
+
+		return lastSequenceNumber;
+	}
+
 	public void insertMessage(Message message) {
 
+		int lastSequenceNumber = getLastSequenceNumber();
+
+		if (message instanceof ChatMessage) {
+
+			ChatMessage chatMessage = (ChatMessage) message;
+
+			if (lastSequenceNumber + 1 < chatMessage.sequenceNumber) {
+				misses.put(chatMessage.sequenceNumber, chatMessage);
+				return;
+			}
+		}
+
 		messages.add(message);
+
+		insertMisses();
+
 		refreshMessagePane();
+	}
+
+	public void insertMisses() {
+		Integer nextMsg = getLastSequenceNumber() + 1;
+
+		ChatMessage message = misses.get(nextMsg);
+
+		if (message == null)
+			return;
+
+		misses.remove(nextMsg);
+		messages.add(message);
+
+		insertMisses();
 	}
 
 	@Override
@@ -578,7 +632,7 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 					return;
 				}
 
-				user.sequenceList.add(chatMessage.sequenceNumber);
+				user.sequenceList.add(chatMessage.sequenceNumber + 1);
 
 				insertMessage(chatMessage);
 			}
@@ -591,7 +645,7 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 
 		Coordinator coordinator = (Coordinator) user;
 
-		int uid = coordinator.getProcessIdFromSequenceNumber(chatMessage.sequenceNumber);
+		int uid = coordinator.getUserIdFromSequenceNumber(chatMessage.sequenceNumber);
 
 		if (uid != chatMessage.user.processId) {
 			// Detta bör aldrig hända, ignorera och hoppa det ej händer igen :)
@@ -652,7 +706,7 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 	}
 
 	@Override
-	public void onIncomingGetUserIDMessage(GetUserIDMessage getUserIDMessage) {
+	public void onIncomingGetUserIDMessage(GetUserIdMessage getUserIDMessage) {
 
 		System.out.println("received GetUserIDMessage");
 
@@ -661,7 +715,7 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 		}
 
 		Coordinator coordinator = (Coordinator) user;
-		int uid = coordinator.getProcessIdFromSequenceNumber(getUserIDMessage.sequenceNumber);
+		int uid = coordinator.getUserIdFromSequenceNumber(getUserIDMessage.sequenceNumber);
 
 		System.out.println("Got a getUserIdMessage, responding...");
 
@@ -683,23 +737,23 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 	}
 
 	@Override
-	public void onIncomingUserIDMessage(UserIDMessage userIDMessage) {
+	public void onIncomingUserIDMessage(UserIdMessage userIdMessage) {
 
 		System.out.println("asdasdasd");
 		System.out.println("assigned " + this.assignMessageReceived);
 		System.out.println("isCoordinator: " + isCoordinator());
 		System.out.println("expects: " + expectsUserIDMessage);
-		System.out.println("recipient: " + userIDMessage.recipientId + " " + user.processId);
+		System.out.println("recipient: " + userIdMessage.recipientId + " " + user.processId);
 
 		if (!this.assignMessageReceived || isCoordinator() || !expectsUserIDMessage
-				|| userIDMessage.recipientId != user.processId) {
+				|| userIdMessage.recipientId != user.processId) {
 			return;
 		}
 
 		System.out.println("received userid message");
 
 		this.expectsUserIDMessage = false;
-		this.receivedUserIdMessage = userIDMessage;
+		this.receivedUserIdMessage = userIdMessage;
 
 	}
 

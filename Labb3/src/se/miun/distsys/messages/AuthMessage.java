@@ -1,6 +1,4 @@
-package se.miun.distsys.messages.ConnectMessages;
-
-import se.miun.distsys.messages.Message;
+package se.miun.distsys.messages;
 
 @SuppressWarnings("serial")
 public class AuthMessage extends Message {
