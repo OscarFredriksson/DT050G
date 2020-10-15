@@ -5,10 +5,10 @@ import se.miun.distsys.messages.Message;
 @SuppressWarnings("serial")
 public class UserIDMessage extends Message {
     public int userId;
-    public int authorId;
+    public int recipientId;
 
-    public UserIDMessage(int userId, int authorId) {
+    public UserIDMessage(int userId, int recipientId) {
         this.userId = userId;
-        this.authorId = authorId;
+        this.recipientId = recipientId;
     }
 }

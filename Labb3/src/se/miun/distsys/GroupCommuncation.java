@@ -7,10 +7,15 @@ import java.net.MulticastSocket;
 
 import se.miun.distsys.listeners.ChatMessageListener;
 import se.miun.distsys.messages.*;
+import se.miun.distsys.messages.ChatMessages.*;
+import se.miun.distsys.messages.ConnectMessages.*;
 import se.miun.distsys.messages.CoordinatorMessages.GenerateSequenceNumberMessage;
 import se.miun.distsys.messages.CoordinatorMessages.GetUserIDMessage;
 import se.miun.distsys.messages.CoordinatorMessages.SequenceNumberMessage;
 import se.miun.distsys.messages.CoordinatorMessages.UserIDMessage;
+import se.miun.distsys.messages.ElectionMessages.AliveMessage;
+import se.miun.distsys.messages.ElectionMessages.ElectionMessage;
+import se.miun.distsys.messages.ElectionMessages.VictoryMessage;
 
 public class GroupCommuncation {
 
@@ -108,13 +113,31 @@ public class GroupCommuncation {
 
 				GetUserIDMessage getUserIDMessage = (GetUserIDMessage) message;
 				if (chatMessageListener != null) {
-					chatMessageListener.onIncomingGetUserIDMessageMessage(getUserIDMessage);
+					chatMessageListener.onIncomingGetUserIDMessage(getUserIDMessage);
 				}
 			} else if (message instanceof UserIDMessage) {
 
 				UserIDMessage userIDMessage = (UserIDMessage) message;
 				if (chatMessageListener != null) {
 					chatMessageListener.onIncomingUserIDMessage(userIDMessage);
+				}
+			} else if (message instanceof AliveMessage) {
+
+				AliveMessage aliveMessage = (AliveMessage) message;
+				if (chatMessageListener != null) {
+					chatMessageListener.onIncomingAliveMessage(aliveMessage);
+				}
+			} else if (message instanceof ElectionMessage) {
+
+				ElectionMessage electionMessage = (ElectionMessage) message;
+				if (chatMessageListener != null) {
+					chatMessageListener.onIncomingElectionMessage(electionMessage);
+				}
+			} else if (message instanceof VictoryMessage) {
+
+				VictoryMessage victoryMessage = (VictoryMessage) message;
+				if (chatMessageListener != null) {
+					chatMessageListener.onIncomingVictoryMessage(victoryMessage);
 				}
 			} else {
 				System.out.println("Unknown message type");
@@ -187,7 +210,7 @@ public class GroupCommuncation {
 		// byte[] data = messageSerializer.serializeMessage(joinMessage);
 		// sendData(data);
 		// } catch (Exception e) {
-		// e.printStackTrace();
+		// e.printStackTrace();xz
 		// }
 	}
 
@@ -213,10 +236,28 @@ public class GroupCommuncation {
 		sendMessage(getUserIDMessage);
 	}
 
-	public void sendUserIDMessage(int userId, int authorId) {
+	public void sendUserIDMessage(int userId, int recipientId) {
 
-		UserIDMessage userIDMessage = new UserIDMessage(userId, authorId);
+		UserIDMessage userIDMessage = new UserIDMessage(userId, recipientId);
 		sendMessage(userIDMessage);
+	}
+
+	public void sendAliveMessage(int authorId) {
+
+		AliveMessage aliveMessage = new AliveMessage(authorId);
+		sendMessage(aliveMessage);
+	}
+
+	public void sendElectionMessage(int authorId) {
+
+		ElectionMessage electionMessage = new ElectionMessage(authorId);
+		sendMessage(electionMessage);
+	}
+
+	public void sendVictoryMessage(int authorId) {
+
+		VictoryMessage victoryMessage = new VictoryMessage(authorId);
+		sendMessage(victoryMessage);
 	}
 
 	public void setChatMessageListener(ChatMessageListener listener) {

@@ -12,10 +12,15 @@ import se.miun.distsys.Coordinator;
 import se.miun.distsys.GroupCommuncation;
 import se.miun.distsys.listeners.ChatMessageListener;
 import se.miun.distsys.messages.*;
+import se.miun.distsys.messages.ChatMessages.*;
+import se.miun.distsys.messages.ConnectMessages.*;
 import se.miun.distsys.messages.CoordinatorMessages.GenerateSequenceNumberMessage;
 import se.miun.distsys.messages.CoordinatorMessages.GetUserIDMessage;
 import se.miun.distsys.messages.CoordinatorMessages.SequenceNumberMessage;
 import se.miun.distsys.messages.CoordinatorMessages.UserIDMessage;
+import se.miun.distsys.messages.ElectionMessages.AliveMessage;
+import se.miun.distsys.messages.ElectionMessages.ElectionMessage;
+import se.miun.distsys.messages.ElectionMessages.VictoryMessage;
 
 import javax.swing.JButton;
 import javax.swing.JTextPane;
@@ -58,6 +63,19 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 
 	boolean assignMessageReceived = false;
 
+	boolean expectsSequenceNumberMessage = false;
+	SequenceNumberMessage receivedSequenceNumberMessage = null;
+	int getSequenceNumberResult;
+
+	boolean expectsUserIDMessage = false;
+	UserIDMessage receivedUserIdMessage = null;
+
+	boolean expectsAliveMessage = false;
+	AliveMessage receivedAliveMessage = null;
+
+	boolean expectsVictoryMessage = false;
+	VictoryMessage receivedVictoryMessage = null;
+
 	public static void main(final String[] args) {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
@@ -82,6 +100,10 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 
 		chatFrame.setVisible(false);
 		joinFrame.setVisible(true);
+	}
+
+	private boolean isCoordinator() {
+		return user instanceof Coordinator;
 	}
 
 	private void initializeJoinFrame() {
@@ -250,11 +272,130 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 
 	private void sendChatMessage() {
 
-		// PLACEHOLDER, RETREIVE FROM COORDINATOR
-		int sequenceNumber = 0;
+		System.out.println("isCoordinator:" + isCoordinator());
+		int sequenceNumber = isCoordinator() ? getSequenceNumberAsCoordinator() : getSequenceNumberAsUser();
 
 		gc.sendChatMessage(txtpnMessage.getText(), user, sequenceNumber);
 		txtpnMessage.setText("");
+	}
+
+	private int getSequenceNumberAsCoordinator() {
+		Coordinator coordinator = (Coordinator) user;
+
+		int seq = coordinator.getSequenceNumber(user.processId);
+
+		return seq;
+	}
+
+	private int getSequenceNumberAsUser() {
+		this.expectsSequenceNumberMessage = true;
+		this.receivedSequenceNumberMessage = null;
+
+		gc.sendGenerateSequenceNumberMessage(user.processId);
+
+		Thread th = new Thread() {
+
+			public void run() {
+				int i = 0;
+				while (receivedSequenceNumberMessage == null) {
+
+					try {
+						Thread.sleep(50);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+
+					if (i > 20) {
+						// No response from coordinator, elect a new one
+						System.out.println(
+								"id: " + user.processId + " no sequence number recieved, starting election...");
+
+						doElection();
+						return;
+					}
+					i++;
+				}
+
+				// user.sequenceList.add(user.processId);
+				getSequenceNumberResult = receivedSequenceNumberMessage.sequenceNumber;
+			}
+		};
+
+		th.start();
+
+		try {
+			th.join();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		return getSequenceNumberResult;
+	}
+
+	private void doElection() {
+
+		if (isCoordinator())
+			return;
+
+		expectsAliveMessage = true;
+		receivedAliveMessage = null;
+
+		expectsVictoryMessage = true;
+		receivedVictoryMessage = null;
+
+		gc.sendElectionMessage(this.user.processId);
+
+		Thread waitForAliveThread = new Thread() {
+			public void run() {
+				int i = 0;
+				while (receivedAliveMessage == null) {
+					try {
+						System.out.println("waiting for alive...");
+						Thread.sleep(50);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+
+					if (i > 20) {
+						// No alive messages, become the winner
+						System.out.println("I am now coordinator");
+						user = new Coordinator(user, user.processId);
+						gc.sendVictoryMessage(user.processId);
+						break;
+					}
+					i++;
+				}
+				System.out.println("Alive message received");
+			}
+		};
+
+		waitForAliveThread.start();
+
+		Thread waitForVictoryThread = new Thread() {
+			public void run() {
+				int i = 0;
+				while (receivedVictoryMessage == null) {
+					try {
+						// System.out.println("waiting for victory...");
+						Thread.sleep(50);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+
+					if (i > 30) {
+						// No victory message, restart election
+						if (!isCoordinator()) {
+							System.out.println("id: " + user.processId + " started election...");
+							doElection();
+						}
+					}
+					i++;
+				}
+
+				System.out.println("election done...");
+			}
+		};
+		waitForVictoryThread.start();
 	}
 
 	private void addClient(User user) {
@@ -265,8 +406,6 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 
 	private void removeClient(User user) {
 		this.user.users.remove(user.name);
-
-		// this.user.clocks.remove(user.name);
 
 		updateClientsList();
 	}
@@ -282,24 +421,13 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 				ChatMessage message = (ChatMessage) messages.get(i);
 
 				txtpnChat.setText(txtpnChat.getText() + "\n" + message);
-
-				// String clocks = "";
-
-				// Iterator<Map.Entry<String, Integer>> it = user.clocks.entrySet().iterator();
-
-				// while (it.hasNext()) {
-				// Map.Entry<String, Integer> pair = (Map.Entry<String, Integer>) it.next();
-				// clocks += " " + pair.getKey() + " " +
-				// user.clocks.get(pair.getKey()).toString();
-				// }
-
 				appendToChat(message.user.name + ": " + message.chat);
 
 			} else if (messages.get(i) instanceof JoinMessage) {
 
 				JoinMessage message = (JoinMessage) messages.get(i);
 
-				appendToChat(message.user.name + " joined the chat!");
+				appendToChat(message.user.name + " joined the chat as id " + message.user.processId);
 
 			} else if (messages.get(i) instanceof LeaveMessage) {
 
@@ -316,51 +444,11 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 		if (txtpnChat.getText().equals("")) {
 			txtpnChat.setText(message);
 		} else {
-
 			txtpnChat.setText(txtpnChat.getText() + "\n" + message);
 		}
 	}
 
-	// private void insertMessage(ChatMessage message) {
-
-	// for (int i = 0; i < messages.size(); i++) {
-
-	// if (messages.get(i) instanceof ChatMessage) {
-
-	// ChatMessage iterMessage = (ChatMessage) messages.get(i);
-
-	// if (iterMessage.user.clock >= mess) {
-	// messages.add(i, message);
-	// return;
-	// }
-	// }
-	// }
-	// messages.add(message);
-	// }
-
-	// private boolean validateClocks(User other) {
-	// if (other.name.equals(user.name)) {
-	// return true;
-	// }
-	// int myclock = user.clocks.get(other.name);
-	// int otherclock = other.clocks.get(other.name);
-
-	// if (myclock + 1 == otherclock) {
-	// user.clocks.put(other.name, otherclock);
-	// return user.clocks.equals(other.clocks);
-	// }
-	// return false;
-	// }
-
 	private void openChat() {
-
-		// user = new User(txtpnUsername.getText());
-
-		// String username = txtpnUsername.getText();
-
-		// gc = new GroupCommuncation();
-
-		// gc.sendAuthMessage(username);
 
 		gc.sendJoinMessage(user);
 
@@ -392,7 +480,7 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 
 					System.out.println("new coordinator created");
 
-					this.user = new Coordinator(user, 0);
+					this.user = new Coordinator(new User(username, 0), 0);
 
 					openChat();
 				}
@@ -437,34 +525,95 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 		}
 	}
 
+	public void insertMessage(Message message) {
+
+		messages.add(message);
+		refreshMessagePane();
+	}
+
 	@Override
 	public void onIncomingChatMessage(final ChatMessage chatMessage) {
 
 		if (!this.assignMessageReceived)
 			return;
 
-		// if (!validateClocks(chatMessage.user)) {
-		// System.out.println("System is no longer in sync :(");
+		if (isCoordinator())
+			handleChatMessageAsCoordinator(chatMessage);
+		else
+			handleChatMessageAsUser(chatMessage);
+	}
 
-		// } else {
+	public void handleChatMessageAsUser(ChatMessage chatMessage) {
 
-		messages.add(chatMessage);
+		this.expectsUserIDMessage = true;
+		this.receivedUserIdMessage = null;
 
-		refreshMessagePane();
-		// }
+		System.out.println("sending getUserIDMessage...");
+
+		gc.sendGetUserIDMessage(chatMessage.sequenceNumber, user.processId);
+
+		Thread th = new Thread() {
+
+			public void run() {
+				int i = 0;
+				while (receivedUserIdMessage == null) {
+					try {
+						Thread.sleep(50);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+
+					if (i > 20) {
+						System.out.println("no answer from coordinator, starting election...");
+						doElection();
+						return;
+					}
+					i++;
+				}
+
+				System.out.println(receivedUserIdMessage);
+				int uid = receivedUserIdMessage.userId;
+
+				if (uid != chatMessage.user.processId) {
+					return;
+				}
+
+				user.sequenceList.add(chatMessage.sequenceNumber);
+
+				insertMessage(chatMessage);
+			}
+		};
+
+		th.start();
+	}
+
+	public void handleChatMessageAsCoordinator(ChatMessage chatMessage) {
+
+		Coordinator coordinator = (Coordinator) user;
+
+		int uid = coordinator.getProcessIdFromSequenceNumber(chatMessage.sequenceNumber);
+
+		if (uid != chatMessage.user.processId) {
+			// Detta bör aldrig hända, ignorera och hoppa det ej händer igen :)
+			return;
+		}
+
+		insertMessage(chatMessage);
+
 	}
 
 	@Override
 	public void onIncomingStatusMessage(final StatusMessage statusMessage) {
+
 		if (!this.assignMessageReceived)
 			return;
+
 		addClient(statusMessage.user);
-		// user.clocks.put(statusMessage.user.name,
-		// statusMessage.user.clocks.get(statusMessage.user.name));
 	}
 
 	@Override
 	public void onIncomingJoinMessage(final JoinMessage joinMessage) {
+
 		if (!this.assignMessageReceived)
 			return;
 
@@ -479,6 +628,7 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 
 	@Override
 	public void onIncomingLeaveMessage(final LeaveMessage leaveMessage) {
+
 		if (!this.assignMessageReceived)
 			return;
 
@@ -491,25 +641,104 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 
 	@Override
 	public void onIncomingGenerateSequenceNumberMessage(GenerateSequenceNumberMessage generateSequenceNumberMessage) {
-		// TODO Auto-generated method stub
 
+		if (!this.assignMessageReceived || !isCoordinator())
+			return;
+
+		Coordinator coordinator = (Coordinator) user;
+		int seq = coordinator.getSequenceNumber(generateSequenceNumberMessage.authorId);
+
+		gc.sendSequenceNumberMessage(seq, generateSequenceNumberMessage.authorId);
 	}
 
 	@Override
-	public void onIncomingGetUserIDMessageMessage(GetUserIDMessage getUserIDMessage) {
-		// TODO Auto-generated method stub
+	public void onIncomingGetUserIDMessage(GetUserIDMessage getUserIDMessage) {
 
+		System.out.println("received GetUserIDMessage");
+
+		if (!this.assignMessageReceived || !isCoordinator()) {
+			return;
+		}
+
+		Coordinator coordinator = (Coordinator) user;
+		int uid = coordinator.getProcessIdFromSequenceNumber(getUserIDMessage.sequenceNumber);
+
+		System.out.println("Got a getUserIdMessage, responding...");
+
+		gc.sendUserIDMessage(uid, getUserIDMessage.authorId);
 	}
 
 	@Override
 	public void onIncomingSequenceNumberMessage(SequenceNumberMessage sequenceNumberMessage) {
-		// TODO Auto-generated method stub
 
+		System.out.println("incoming sequenceNumberMessage");
+
+		if (!this.assignMessageReceived || isCoordinator() || !expectsSequenceNumberMessage
+				|| sequenceNumberMessage.recipientId != user.processId) {
+			return;
+		}
+
+		this.expectsSequenceNumberMessage = false;
+		this.receivedSequenceNumberMessage = sequenceNumberMessage;
 	}
 
 	@Override
 	public void onIncomingUserIDMessage(UserIDMessage userIDMessage) {
-		// TODO Auto-generated method stub
 
+		System.out.println("asdasdasd");
+		System.out.println("assigned " + this.assignMessageReceived);
+		System.out.println("isCoordinator: " + isCoordinator());
+		System.out.println("expects: " + expectsUserIDMessage);
+		System.out.println("recipient: " + userIDMessage.recipientId + " " + user.processId);
+
+		if (!this.assignMessageReceived || isCoordinator() || !expectsUserIDMessage
+				|| userIDMessage.recipientId != user.processId) {
+			return;
+		}
+
+		System.out.println("received userid message");
+
+		this.expectsUserIDMessage = false;
+		this.receivedUserIdMessage = userIDMessage;
+
+	}
+
+	@Override
+	public void onIncomingAliveMessage(AliveMessage aliveMessage) {
+		System.out.println("received alive message: " + aliveMessage.authorId + " " + user.processId);
+
+		if (!this.assignMessageReceived || isCoordinator() || !expectsAliveMessage
+				|| aliveMessage.authorId <= user.processId) {
+			return;
+		}
+
+		this.expectsAliveMessage = false;
+		this.receivedAliveMessage = aliveMessage;
+	}
+
+	@Override
+	public void onIncomingElectionMessage(ElectionMessage electionMessage) {
+		if (electionMessage.authorId >= this.user.processId) {
+			return;
+		}
+
+		System.out.println("received election message");
+
+		gc.sendAliveMessage(this.user.processId);
+
+		doElection();
+	}
+
+	@Override
+	public void onIncomingVictoryMessage(VictoryMessage victoryMessage) {
+
+		System.out.println(victoryMessage.authorId + " is now the Coordinator.");
+
+		if (!this.expectsVictoryMessage) {
+			return;
+		}
+
+		this.expectsVictoryMessage = false;
+		this.receivedVictoryMessage = victoryMessage;
 	}
 }

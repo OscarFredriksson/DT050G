@@ -1,6 +1,7 @@
-package se.miun.distsys.messages;
+package se.miun.distsys.messages.ConnectMessages;
 
 import se.miun.distsys.User;
+import se.miun.distsys.messages.Message;
 
 @SuppressWarnings("serial")
 public class StatusMessage extends Message {
