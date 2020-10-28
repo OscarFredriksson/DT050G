@@ -240,11 +240,6 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 	}
 
 	private void sendChatMessage() {
-		// user.clock++;
-
-		int clock = this.user.clocks.get(this.user.name);
-		clock++;
-		this.user.clocks.put(this.user.name, clock);
 
 		gc.sendChatMessage(txtpnMessage.getText(), user);
 		txtpnMessage.setText("");
@@ -270,18 +265,6 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 			if (messages.get(i) instanceof ChatMessage) {
 
 				ChatMessage message = (ChatMessage) messages.get(i);
-
-				txtpnChat.setText(txtpnChat.getText() + "\n" + message);
-
-				// String clocks = "";
-
-				// Iterator<Map.Entry<String, Integer>> it = user.clocks.entrySet().iterator();
-
-				// while (it.hasNext()) {
-				// Map.Entry<String, Integer> pair = (Map.Entry<String, Integer>) it.next();
-				// clocks += " " + pair.getKey() + " " +
-				// user.clocks.get(pair.getKey()).toString();
-				// }
 
 				appendToChat(message.user.name + ": " + message.chat);
 
@@ -311,37 +294,6 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 		}
 	}
 
-	// private void insertMessage(ChatMessage message) {
-
-	// for (int i = 0; i < messages.size(); i++) {
-
-	// if (messages.get(i) instanceof ChatMessage) {
-
-	// ChatMessage iterMessage = (ChatMessage) messages.get(i);
-
-	// if (iterMessage.user.clock >= mess) {
-	// messages.add(i, message);
-	// return;
-	// }
-	// }
-	// }
-	// messages.add(message);
-	// }
-
-	private boolean validateClocks(User other) {
-		if (other.name.equals(user.name)) {
-			return true;
-		}
-		int myclock = user.clocks.get(other.name);
-		int otherclock = other.clocks.get(other.name);
-
-		if (myclock + 1 == otherclock) {
-			user.clocks.put(other.name, otherclock);
-			return user.clocks.equals(other.clocks);
-		}
-		return false;
-	}
-
 	private void openChat() {
 
 		user = new User(txtpnUsername.getText());
@@ -368,22 +320,15 @@ public class WindowProgram implements ChatMessageListener, ActionListener {
 	@Override
 	public void onIncomingChatMessage(final ChatMessage chatMessage) {
 
-		if (!validateClocks(chatMessage.user)) {
-			System.out.println("System is no longer in sync :(");
+		messages.add(chatMessage);
 
-		} else {
-
-			messages.add(chatMessage);
-
-			refreshMessagePane();
-		}
+		refreshMessagePane();
 	}
 
 	@Override
 	public void onIncomingStatusMessage(final StatusMessage statusMessage) {
 
 		addClient(statusMessage.user);
-		user.clocks.put(statusMessage.user.name, statusMessage.user.clocks.get(statusMessage.user.name));
 	}
 
 	@Override
